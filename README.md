@@ -15,7 +15,7 @@ apt install -y mariadb-server
 mysql -e "CREATE DATABASE IF NOT EXISTS laravel_ukk;"
 #Bikin usernya
 mysql -e "CREATE USER 'laravel_ukk'@'localhost' IDENTIFIED BY '123';"
-mysql -e "GRANT ALL PRIVILEGES ON.* TO 'laravel_ukk'@'localhost';"
+mysql -e "GRANT ALL PRIVILEGES ON laravel_ukk.* TO 'laravel_ukk'@'localhost';"
 mysql -e "FLUSH PRIVILEGES;"
 
 #Install Composer
