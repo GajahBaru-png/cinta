@@ -43,6 +43,7 @@ php artisan key:gen
 php artisan migrate --seed
 php artisan migrate:refresh --seed
 php artisan shield:gen --all
+php artisan make:filament-user
 
 #Setting permission
 chown -R www-data:www-data storage bootstrap/cache
