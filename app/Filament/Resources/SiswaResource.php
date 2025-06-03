@@ -34,7 +34,39 @@ class SiswaResource extends Resource
                 ->options(['L' => 'Laki-laki', 'P' => 'Perempuan'])
                 ->required(),
             Textarea::make('alamat')->required(),
-            TextInput::make('kontak')->required(),
+            TextInput::make('kontak')->required()
+            ->formatStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Jika sudah ada +62, kembalikan seperti semula
+                        if (str_starts_with($state, '+62')) {
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Jika sudah ada +62, kembalikan seperti semula
+                        if (str_starts_with($state, '+62')) {
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    }),
             TextInput::make('email')->email()->required()->unique(),
             Select::make('status_pkl')
                 ->options([0 => 'Belum diterima PKL', 1 => 'Sudah diterima PKL'])
@@ -59,7 +91,24 @@ class SiswaResource extends Resource
                         default => 'Tidak Diketahui',
                     }),
                 TextColumn::make('alamat')->label('Alamat')->limit(25),
-                TextColumn::make('kontak')->label('Kontak'),
+                TextColumn::make('kontak')->label('Kontak')
+                ->formatStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Tampilkan format yang lebih readable
+                        if (str_starts_with($state, '+62')) {
+                            // Ubah +62812345678 menjadi +62 812-345-678
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    }),
                 TextColumn::make('email')->label('E-mail'),
                 TextColumn::make('status_pkl')
                     ->label('Status PKL')

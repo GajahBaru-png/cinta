@@ -16,10 +16,6 @@ interface Laporan {
     durasi: string;
 }
 
-type User = {
-    name: string;
-    email: string;
-};
 
 // Props halaman
 interface LaporanMainProps extends PageProps {

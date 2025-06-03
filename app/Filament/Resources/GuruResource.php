@@ -34,9 +34,42 @@ class GuruResource extends Resource
                     ->options(['L' => 'Laki-laki', 'P' => 'Perempuan'])
                     ->required(),
                 Textarea::make('alamat')->required(),
-                TextInput::make('kontak'),
+                TextInput::make('kontak')
+                ->formatStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Jika sudah ada +62, kembalikan seperti semula
+                        if (str_starts_with($state, '+62')) {
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    })
+                    ->dehydrateStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Jika sudah ada +62, kembalikan seperti semula
+                        if (str_starts_with($state, '+62')) {
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    }),
                 TextInput::make('email')->email(),
             ]);
+            
 
     }
 
@@ -47,7 +80,24 @@ class GuruResource extends Resource
                 TextColumn::make('nama')->label('Nama'),
                 TextColumn::make('nip')->label('NIP'),
                 TextColumn::make('alamat')->label('Alamat')->limit(25),
-                TextColumn::make('kontak')->label('Kontak'),
+                TextColumn::make('kontak')->label('Kontak')
+                ->formatStateUsing(function ($state) {
+                        if (!$state) return null;
+
+                        // Tampilkan format yang lebih readable
+                        if (str_starts_with($state, '+62')) {
+                            // Ubah +62812345678 menjadi +62 812-345-678
+                            return $state;
+                        }
+
+                        // Jika dimulai dengan 0, hapus 0 dan tambah +62
+                        if (str_starts_with($state, '0')) {
+                            return '+62' . substr($state, 1);
+                        }
+
+                        // Jika tidak dimulai dengan 0 atau +62, tambah +62
+                        return '+62' . $state;
+                    }),
                 TextColumn::make('email')->label('E-mail'),
                 TextColumn::make('gender')
                     ->label('Kelamin')

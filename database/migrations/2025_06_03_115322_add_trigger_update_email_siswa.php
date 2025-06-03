@@ -8,16 +8,16 @@ class AddTriggerUpdateEmailSiswa extends Migration
 {
     public function up()
     {
-        DB::unprepared('
-            CREATE TRIGGER trigger_update_email_siswa
-            AFTER UPDATE ON users
+        DB::unprepared("
+            CREATE TRIGGER update_email_user_from_siswa
+            AFTER UPDATE ON siswa
             FOR EACH ROW
             BEGIN
                 IF OLD.email != NEW.email THEN
-                    UPDATE siswa SET email = NEW.email WHERE email = OLD.email;
+                    UPDATE users SET email = NEW.email WHERE email = OLD.email;
                 END IF;
-            END;
-        ');
+            END
+        ");
     }
 
     public function down()
