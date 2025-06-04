@@ -35,7 +35,6 @@ class IndustriResource extends Resource
                 TextInput::make('email')->email(),
                 Select::make('guru_pembimbing')
                     ->relationship('guru', 'nama')
-                    ->required()
                     ->label('Guru Pembimbing'),
             ]);
 

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SiswaResource\Pages;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Notifications\Notification;
 use App\Filament\Resources\SiswaResource\RelationManagers;
 use App\Models\Siswa;
 use Filament\Forms;
@@ -16,6 +18,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ToggleColumn;
 
 class SiswaResource extends Resource
 {
@@ -68,8 +72,8 @@ class SiswaResource extends Resource
                         return '+62' . $state;
                     }),
             TextInput::make('email')->email()->required()->unique(),
-            Select::make('status_pkl')
-                ->options([0 => 'Belum diterima PKL', 1 => 'Sudah diterima PKL'])
+            Toggle::make('status_pkl')
+                // ->options([0 => 'Belum diterima PKL', 1 => 'Sudah diterima PKL'])
                 ->required(),
             ]);
 
@@ -110,10 +114,10 @@ class SiswaResource extends Resource
                         return '+62' . $state;
                     }),
                 TextColumn::make('email')->label('E-mail'),
-                TextColumn::make('status_pkl')
+                ToggleColumn::make('status_pkl')
                     ->label('Status PKL')
                     ->sortable()
-                    ->formatStateUsing(fn ($state) => $state == 1 ? 'Terverifikasi' : 'Belum Terverifikasi'),
+                    // ->formatStateUsing(fn ($state) => $state == 1 ? 'Terverifikasi' : 'Belum Terverifikasi'),
             ])
 
             ->filters([
@@ -121,12 +125,22 @@ class SiswaResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('deleteSelected')
+                    ->label('Hapus yang Belum PKL')
+                    ->requiresConfirmation()
+                    ->action(function (Collection $records) {
+                        $recordsToDelete = $records->filter(function ($record) {
+                            return $record->status_pkl == 0;
+                        });
+
+                        $recordsToDelete->each->delete();
+                    })
+                    ->deselectRecordsAfterCompletion()
+                    ->color('danger')
+                    ->icon('heroicon-o-trash'),
             ]);
-            // ->bulkActions([
-            //     Tables\Actions\BulkActionGroup::make([
-            //         Tables\Actions\DeleteBulkAction::make(),
-            //     ]),
-            // ]);
     }
 
     public static function getRelations(): array

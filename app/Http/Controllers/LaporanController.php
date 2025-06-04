@@ -21,32 +21,33 @@ class LaporanController extends Controller
      * Merender komponen LaporanMain.tsx.
      */
     public function index(Request $request)
-{
-    $laporans = PKL::with(['siswa', 'guru', 'industri'])
-        ->latest()
-        ->paginate(10)
-        ->through(function ($laporan) {
-            $mulai = \Carbon\Carbon::parse($laporan->mulai);
-            $selesai = \Carbon\Carbon::parse($laporan->selesai);
-            $durasi = $mulai->diffInDays($selesai);
+    {
+        $laporans = PKL::with(['siswa', 'guru', 'industri'])
+            ->latest()
+            ->paginate(10)
+            ->through(function ($laporan) {
+                $mulai = \Carbon\Carbon::parse($laporan->mulai);
+                $selesai = \Carbon\Carbon::parse($laporan->selesai);
+                $durasi = $mulai->diffInDays($selesai);
 
-            return [
-                'id' => $laporan->id,
-                'mulai' => $laporan->mulai,
-                'selesai' => $laporan->selesai,
-                'siswa' => ['nama' => $laporan->siswa->nama],
-                'guru' => ['nama' => $laporan->guru->nama],
-                'industri' => ['nama' => $laporan->industri->nama],
-                'durasi' => $durasi . ' hari',
-            ];
-        })
-        ->withQueryString();
+                return [
+                    'id' => $laporan->id,
+                    'mulai' => $laporan->mulai,
+                    'selesai' => $laporan->selesai,
+                    'siswa' => ['nama' => $laporan->siswa->nama],
+                    'guru' => ['nama' => $laporan->guru->nama],
+                    'industri' => ['nama' => $laporan->industri->nama],
+                    'durasi' => $durasi . ' hari',
+                ];
+            })
+            ->withQueryString();
 
-    return Inertia::render('LaporanMain', [
-        'laporans' => $laporans,
-        'userRole' => auth()->user()->getRoleNames()->first(),
-    ]);
-}
+        return Inertia::render('LaporanMain', [
+            'laporans' => $laporans,
+            'userRole' => auth()->user()->getRoleNames()->first(),
+        ]);
+    }
+
 
     /**
      * Menampilkan form untuk membuat laporan PKL baru.
@@ -95,87 +96,89 @@ class LaporanController extends Controller
      * Menyimpan laporan PKL baru.
      */
     public function store(Request $request): RedirectResponse
-    {
-        $authUser = Auth::user();
-        $userRole = $authUser ? $authUser->getRoleNames()->first() : null;
-        
-        if ($userRole === 'guru') {
-            abort(403, 'Guru tidak diizinkan membuat laporan PKL.');
-        }
+{
+    $authUser = Auth::user();
+    $userRole = $authUser ? $authUser->getRoleNames()->first() : null;
 
-        $validated = $request->validate([
-            'siswa_id' => 'required|exists:siswa,id',
-            'guru_id' => 'required|exists:guru,id',
-            'industri_id' => 'required|exists:industri,id',
-            'mulai' => 'required|date',
-            'selesai' => 'required|date|after_or_equal:mulai',
-            'durasi' => $durasi . ' hari',
-        ]);
+    if ($userRole === 'guru') {
+        abort(403, 'Guru tidak diizinkan membuat laporan PKL.');
+    }
 
-        $rekrutpkl=PKL::with('siswa')->get()->map(function($rekrutpkl) {
-            $mulai = Carbon::parse($rekrutpkl->mulai);
-            $selesai = Carbon::parse($rekrutpkl->selesai);
-            $durasi = $mulai->diffInDays($selesai);
-        
-        });
+    // Validasi input
+    $validated = $request->validate([
+        'siswa_id' => 'required|exists:siswa,id',
+        'guru_id' => 'required|exists:guru,id',
+        'industri_id' => 'required|exists:industri,id',
+        'mulai' => 'required|date',
+        'selesai' => 'required|date|after_or_equal:mulai',
+    ]);
 
-        
-        
-        
-        if ($mulai->diffInDays($selesai) < 90) {
+    // Hitung durasi
+    $mulai = Carbon::parse($validated['mulai']);
+    $selesai = Carbon::parse($validated['selesai']);
+    $durasi = $mulai->diffInDays($selesai);
+
+    // Pastikan durasi minimal 90 hari
+    if ($durasi < 90) {
+        return redirect()->route('laporan.create')
+                         ->with('error', 'Durasi PKL minimal adalah 90 hari.')
+                         ->withInput();
+    }
+
+    $siswa = Siswa::find($validated['siswa_id']);
+
+    // Validasi tambahan jika user adalah siswa
+    if ($userRole === 'siswa') {
+        $loggedInSiswa = Siswa::where("email", $authUser->email)->first();
+
+        if (!$loggedInSiswa || $loggedInSiswa->id != $validated['siswa_id']) {
             return redirect()->route('laporan.create')
-                            ->with('error', 'Durasi PKL minimal adalah 90 hari.')
-                            ->withInput();
-        }
-        $siswa = Siswa::find($validated['siswa_id']);
-
-
-        // Pengecekan tambahan jika yang submit adalah siswa
-        if ($userRole === 'siswa') {
-            // Pastikan siswa_id yang dikirim adalah ID siswa yang sedang login
-            $loggedInSiswa = Siswa::where("email", $authUser->email)->first();
-            if (!$loggedInSiswa || $loggedInSiswa->id != $validated['siswa_id']) {
-                return redirect()->route('laporan.create')
-                                 ->with('error', 'Anda tidak diizinkan membuat laporan untuk siswa lain.')
-                                 ->withInput();
-            }
-            // Cek lagi status_pkl siswa tersebut
-            if ($siswa && $siswa->status_pkl) {
-                return redirect()->route('laporan.index') // atau laporan.create
-                                 ->with('error', 'Anda sudah memiliki laporan PKL aktif.');
-                                 // ->withInput(); // jika redirect ke laporan.create
-            }
-        } elseif ($userRole === 'admin' || $userRole === 'super-admin') {
-            // Admin boleh membuatkan, tapi pastikan siswa yang dipilih memang belum punya PKL
-            // Ini seharusnya sudah ditangani oleh filter di create(), tapi double check tidak masalah
-            if ($siswa && $siswa->status_pkl) {
-                 return redirect()->route('laporan.create')
-                                 ->with('error', 'Siswa yang dipilih sudah memiliki laporan PKL aktif.')
-                                 ->withInput();
-            }
-        }
-
-
-        DB::beginTransaction();
-
-        try {
-            PKL::create($validated);
-            // $siswa sudah di-find di atas
-            if ($siswa) {
-                $siswa->update(['status_pkl' => 1]); // atau true
-            }
-
-            DB::commit();
-
-            return redirect()->route('laporan.index')
-                             ->with('success', 'Laporan PKL berhasil ditambahkan!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return redirect()->route('laporan.create')
-                             ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                             ->with('error', 'Anda tidak diizinkan membuat laporan untuk siswa lain.')
                              ->withInput();
         }
+
+        if ($siswa && $siswa->status_pkl) {
+            return redirect()->route('laporan.index')
+                             ->with('error', 'Anda sudah memiliki laporan PKL aktif.');
+        }
     }
+
+    // Validasi tambahan jika admin membuat laporan
+    if (($userRole === 'admin' || $userRole === 'super-admin') && $siswa && $siswa->status_pkl) {
+        return redirect()->route('laporan.create')
+                         ->with('error', 'Siswa yang dipilih sudah memiliki laporan PKL aktif.')
+                         ->withInput();
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // Simpan data laporan
+        PKL::create([
+            'siswa_id' => $validated['siswa_id'],
+            'guru_id' => $validated['guru_id'],
+            'industri_id' => $validated['industri_id'],
+            'mulai' => $validated['mulai'],
+            'selesai' => $validated['selesai'],
+            // 'durasi' => $durasi, // Un-comment jika kolom durasi tersedia di tabel
+        ]);
+
+        // Update status PKL siswa
+        if ($siswa) {
+            $siswa->update(['status_pkl' => true]);
+        }
+
+        DB::commit();
+
+        return redirect()->route('laporan.index')
+                         ->with('success', 'Laporan PKL berhasil ditambahkan!');
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return redirect()->route('laporan.create')
+                         ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                         ->withInput();
+    }
+}
+
 }

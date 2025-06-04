@@ -1,8 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
+
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\GuruApiController;
+use App\Http\Controllers\Api\IndustriApiController;
+use App\Http\Controllers\Api\PklApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,5 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::prefix('/')->group(function () {
     Route::apiResource('guru', 'App\Http\Controllers\Api\GuruApiController');
+    Route::apiResource('siswa', 'App\Http\Controllers\Api\SiswaController');
+    Route::apiResource('industri', 'App\Http\Controllers\Api\IndustriApiController');
+    Route::apiResource('pkl', 'App\Http\Controllers\Api\PklApiController');
 });
 
